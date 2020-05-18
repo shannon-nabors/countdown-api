@@ -5,7 +5,7 @@ $goal = 0
 $numbers = []
 
 BIG = [25, 50, 75, 100]
-LITTLE = (1..10).to_a
+LITTLE = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10]
 OPERATORS = ["+", "-", "/", "*"]
 
 
@@ -20,8 +20,8 @@ def get_goal
 end
 
 def run
-    $goal = get_goal
-    $numbers = get_numbers(4, 2).sort.reverse
+    $goal = get_goal#109
+    $numbers = get_numbers(2, 4).sort.reverse#[100, 75, 50, 25, 8, 3]
     puts ""
     puts "GOAL: ", $goal
     puts ""
@@ -152,19 +152,17 @@ end
 
 def hanging_plus_or_minus(solution_string)
     # returns true if solution needs to be wrapped in ()
-    return false if (!solution_string.include?("+") && !solution_string.include?("-"))
-    return true if !solution_string.include?(")")
+    return false if !solution_string.match?(/[+-]/)
+    return true if !solution_string.match?(/[)]/)
 
-    reversed = solution_string.reverse
-    plus_index = reversed.index("+")
-    minus_index = reversed.index("-")
-    close_index = reversed.index(")")
-    open_index = reversed.index("(")
+    string = solution_string.clone()
 
-    hanging_plus = (plus_index && ((plus_index < close_index && plus_index < open_index) || (plus_index > close_index && plus_index > open_index)))
-    hanging_minus = (minus_index && ((minus_index < close_index && minus_index < open_index) || (minus_index > close_index && minus_index > open_index)))
-
-    return true if (hanging_plus || hanging_minus)
+    open_index = string.index("(")
+    close_index = string.chars.count - string.reverse.index(")")
+    parenthetical = string.slice(open_index, close_index - open_index)
+    string = string.sub(parenthetical, "")
+    
+    return true if string.match?(/[+-]/)
     return false
 end
 
@@ -178,7 +176,20 @@ def try_all_ops(number_one, number_two, solution, pool, addendum)
         new_number = operation.call(a, b)
         next if !new_number
 
-        if a == number_two && a != b && (sym == :- || sym == :/)
+        if sym == :* && addendum && (addendum.include?("+") || addendum.include?("-"))
+            addendum = "(" + addendum + ")"
+        end
+
+        if sym == :/ && addendum
+            addendum = "(" + addendum + ")"
+        end
+
+        if a == number_two && a != b && sym == :- && addendum && !addendum.include?("+") && !addendum.include?("-")
+            if solution.include?("+") || solution.include?("-")
+                solution = "(" + solution + ")"
+            end
+            solution = addendum + sym.to_s + solution
+        elsif a == number_two && a != b && (sym == :- || sym == :/)
             solution = "(" + solution + ")"
             if addendum
                 solution = addendum + sym.to_s + solution
@@ -194,7 +205,9 @@ def try_all_ops(number_one, number_two, solution, pool, addendum)
                 solution = solution + sym.to_s + number_two.to_s
             end
         else
-            if addendum
+            if addendum && sym == :-
+                solution = solution + sym.to_s + "(" + addendum + ")"
+            elsif addendum
                 solution = solution + sym.to_s + addendum
             else
                 solution = solution + sym.to_s + number_two.to_s
@@ -226,6 +239,8 @@ def exhaust_pool(pool, num, solution)
                 pool = pool - [combo]
             end
 
+            # addendum = "^^" + combo.to_s + "^^"
+
             try_all_ops(num, combo, solution, pool, false)
             pool << combo
             pool = pool.sort.reverse
@@ -248,7 +263,8 @@ def exhaust_pool(pool, num, solution)
 
             $pairs[combo].each do |op_string, number|
                 if number
-                    addendum = "(" + op_string + ")"
+                    # addendum = "|||" + op_string + "|||"
+                    addendum = op_string
                     try_all_ops(num, number, solution, pool, addendum)
                 end
             end
@@ -278,6 +294,7 @@ def solve
                     pool = $numbers - pair
                 end
 
+                # solution = "..." + op_string + "..."
                 solution = op_string
                 if num == $goal
                     $solutions << solution
@@ -291,8 +308,8 @@ def solve
     puts ""
     puts "SOLUTIONS:"
 
-    $solutions.uniq.each do |solution|
-        puts solution
+    $solutions.uniq.each_with_index do |solution, index|
+        puts index.to_s + "  ------>  " + solution
     end
 
     puts ""
@@ -302,3 +319,69 @@ end
 
 puts Benchmark.realtime { run }
 puts ""
+puts "ERRORS:"
+
+$solutions.each do |solution|
+    if eval(solution) != $goal
+        puts solution + "  ------->  " + eval(solution).to_s
+    end
+end
+
+
+
+
+
+
+
+
+def simplify(op_string)
+    num = get_first_number(op_string)
+    op_string = op_string.delete_prefix(num.to_s)
+    num = num.to_s.to_i
+
+    return num if op_string.empty?
+
+    operator = op_string[0]
+    op_string = op_string.delete_prefix(operator)
+   
+    return num.public_send(operator, simplify(op_string))
+end
+
+def get_first_number(string)
+    return string.match(/^\d+/)
+end
+
+def get_last_number(string)
+    return string.match(/\d+$/)
+end
+
+def find_and_spot_solve_mult_or_div(solution)
+    numbers = solution.split(/[+\-*\/]/)
+    operators = solution.scan(/[+\-*\/]/)
+    operator = operators.find {|op| op == "*" || op == "/"}
+    i = operators.index(operator)
+    first_num = numbers[i]
+    second_num = numbers[i+1]
+
+    extraction = first_num + operator + second_num
+    # binding.pry
+    return solution.sub(extraction, simplify(extraction).to_s)
+end
+
+def parse(solution)
+    while solution.match(/[*\/]/)
+        solution = find_and_spot_solve_mult_or_div(solution)
+        # binding.pry
+    end
+    simplify(solution)
+end
+
+# parse("75-((25*(3+100))/8)+50")
+# 75-((25*103)/8)+50
+# 75-(2575/8)+50
+# 75-322+50
+# puts parse("25*3+100/25")
+# puts parse("100+25*3/25")
+
+#   (?<=[+*/-])(.*?)(?=[*/])
+#   [*\/]
