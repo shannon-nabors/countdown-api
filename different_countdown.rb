@@ -1,5 +1,6 @@
 require 'pry'
 require 'benchmark'
+require 'colorize'
 
 $goal = 0
 $numbers = []
@@ -20,8 +21,8 @@ def get_goal
 end
 
 def run
-    $goal = get_goal#109
-    $numbers = get_numbers(2, 4).sort.reverse#[100, 75, 50, 25, 8, 3]
+    $goal = 499#get_goal
+    $numbers = [100, 75, 8, 8, 4, 1]#get_numbers(2, 4).sort.reverse
     puts ""
     puts "GOAL: ", $goal
     puts ""
@@ -308,8 +309,16 @@ def solve
     puts ""
     puts "SOLUTIONS:"
 
-    $solutions.uniq.each_with_index do |solution, index|
-        puts index.to_s + "  ------>  " + solution
+    duplicate_checker = {}
+
+    $solutions.each_with_index do |solution, index|
+        sol_string = index.to_s + "  ------>  " + solution
+        if duplicate_checker[solution]
+            puts sol_string.red
+        else
+            puts sol_string
+        end
+        duplicate_checker[solution] = "x"
     end
 
     puts ""
