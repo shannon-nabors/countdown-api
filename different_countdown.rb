@@ -85,7 +85,7 @@ def add_three_sets
     end
     
     three_sets = three_sets.uniq
-    # Please for the love of god come back and find a better way to do this
+    # Find a better way to do this
     
     three_sets.each do |set|
         a, b, c, set_possibilities = set[0], set[1], set[2], {}
@@ -240,9 +240,10 @@ def exhaust_pool(pool, num, solution)
                 pool = pool - [combo]
             end
 
-            # addendum = "^^" + combo.to_s + "^^"
+            addendum = "^^" + combo.to_s + "^^"
+            # addendum = combo.to_s
 
-            try_all_ops(num, combo, solution, pool, false)
+            try_all_ops(num, combo, solution, pool, addendum)
             pool << combo
             pool = pool.sort.reverse
 
@@ -264,8 +265,8 @@ def exhaust_pool(pool, num, solution)
 
             $pairs[combo].each do |op_string, number|
                 if number
-                    # addendum = "|||" + op_string + "|||"
-                    addendum = op_string
+                    addendum = "|||" + op_string + "|||"
+                    # addendum = op_string
                     try_all_ops(num, number, solution, pool, addendum)
                 end
             end
@@ -277,26 +278,26 @@ def exhaust_pool(pool, num, solution)
     end
 end
 
-def solve
-    $pairs.each do |pair, possibilities|
+def remove_pair_from_pool(pair)
+    if pair.count(pair[1]) > 1 || $numbers.count(pair[0]) > 1 || $numbers.count(pair[1]) > 1
+        pool = $numbers.clone() 
+        pair.each {|num| pool.delete_at(pool.index(num))} 
+    else
+        pool = $numbers - pair
+    end
 
+    return pool
+end
+
+def solve
+    # binding.pry
+    $pairs.each do |pair, possibilities|
         possibilities.each do |op_string, num|
             if num
-                if pair.count(pair[1]) > 1
-                    pool = $numbers.clone()
-                    pair.each {|num| pool.delete_at(pool.index(num))}
-                elsif $numbers.count(pair[0]) > 1
-                    pool = $numbers.clone()
-                    pair.each {|num| pool.delete_at(pool.index(num))}
-                elsif $numbers.count(pair[1]) > 1
-                    pool = $numbers.clone()
-                    pair.each {|num| pool.delete_at(pool.index(num))}
-                else
-                    pool = $numbers - pair
-                end
+                pool = remove_pair_from_pool(pair)
 
-                # solution = "..." + op_string + "..."
-                solution = op_string
+                solution = "..." + op_string + "..."
+                # solution = op_string
                 if num == $goal
                     $solutions << solution
                     next
@@ -330,8 +331,8 @@ puts Benchmark.realtime { run }
 puts ""
 puts "ERRORS:"
 
-$solutions.each do |solution|
-    if eval(solution) != $goal
-        puts solution + "  ------->  " + eval(solution).to_s
-    end
-end
+# $solutions.each do |solution|
+#     if eval(solution) != $goal
+#         puts solution + "  ------->  " + eval(solution).to_s
+#     end
+# end
