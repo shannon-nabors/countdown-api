@@ -7,6 +7,10 @@ class CountdownSolver
     @@big = [25, 50, 75, 100]
     @@little = [1, 1, 2, 2, 3, 3, 4, 4, 5, 5, 6, 6, 7, 7, 8, 8, 9, 9, 10, 10]
     @@operators = ["+", "-", "/", "*"]
+
+    # Each operation proc returns either the combination of two numbers using that operation,
+    # or FALSE if the result would be against the rules in Countdown (negative number, non-whole number)
+    # or if it wouldn't be useful to do that operation (i.e. it gives us a number we already have)
     @@ops = {
         "+": Proc.new { |a, b| (a && b) ? a + b : false },
         # both numbers must be present
@@ -33,6 +37,8 @@ class CountdownSolver
         @pairs, @solutions = {}, []
     end
 
+    ###############################
+
     def get_numbers(big, little)
         @@big.sample(big) + @@little.sample(little)
     end
@@ -41,56 +47,70 @@ class CountdownSolver
         (101...1000).to_a.sample
     end
 
-    def duplicates?(pair)
-        return true if self.numbers.count(pair[0]) > 1
-        return true if self.numbers.count(pair[1]) > 1
-        return false
-    end
-    
-    def remove_pair_from_pool(pair)
-        if duplicates?(pair)
-            pool = self.numbers.clone() 
-            pair.each {|num| pool.delete_at(pool.index(num))} 
-        else
-            pool = self.numbers - pair
-        end
-    
-        return pool
-    end
-
     def run
         puts "\nGOAL: ", self.goal
         puts "\nNUMBERS: ", self.numbers
     
-        self.separate
+        self.separate_into_pairs
         self.add_three_sets
         self.solve
     end
 
-    def separate
-        self.numbers.each_with_index do |number, index|
-            next_index = index + 1
-            while next_index < self.numbers.length
-                results = {}
-                next_number = self.numbers[next_index]
-    
-                results["#{number}+#{next_number}"] = @@ops[:+].call(number, next_number)
-                results["#{number}-#{next_number}"] = @@ops[:-].call(number, next_number)
-                results["#{number}*#{next_number}"] = @@ops[:*].call(number, next_number)
-                results["#{number}/#{next_number}"] = @@ops[:/].call(number, next_number)
-    
-                self.pairs[[number, next_number]] = results
-    
-                next_index += 1
-            end
+    ###############################
+
+    # Create a hash where each possible pair of numbers points to
+    # all the numbers that could be made from combining them.
+    #
+    # Example:
+    # [100, 75, 8, 8, 4, 1] --> {[100, 75] => {"100+75"=>175, "100-75"=>25, "100*75"=>7500, "100/75"=>false},
+    #                            [100, 8]=>{"100+8"=>108, "100-8"=>92, "100*8"=>800, "100/8"=>false},
+    #                             etc. }
+
+    def separate_into_pairs
+        self.numbers.each_with_index do |num, index|
+            pair_number_with_each_remaining(num, index)
         end
+        binding.pry
     end
 
-    def add_three_sets
+    def pair_number_with_each_remaining(num, index)
+        next_index = index + 1
+        return if next_index >= self.numbers.length
+
+        next_num = self.numbers[next_index]
+        self.pairs[[num, next_num]] = all_possible_numbers_from_combining(num, next_num)
+
+        pair_number_with_each_remaining(num, next_index)
+    end
+
+    def all_possible_numbers_from_combining(a, b)
+        results = {}
+
+        results["#{a}+#{b}"] = @@ops[:+].call(a, b)
+        results["#{a}-#{b}"] = @@ops[:-].call(a, b)
+        results["#{a}*#{b}"] = @@ops[:*].call(a, b)
+        results["#{a}/#{b}"] = @@ops[:/].call(a, b)
+
+        return results
+    end
+
+    ###############################
+    
+    # Adds to the pairs hash all possible combinations of three numbers from the set.
+    # Each set points to all the unique numbers that could be made from combining them.
+    #
+    # Example:
+    #
+    #
+    # This is necessary because some solutions involve combining two numbers
+    # that can only be gotten by combining three numbers.
+
+
+    def generate_three_sets
         three_sets = []
         
         self.pairs.each do |pair, possibilities|
-            pool = remove_pair_from_pool(pair)
+            pool = pool_with_pair_removed(pair)
     
             pool.each do |num|
                 if num <= pair[1]
@@ -100,8 +120,13 @@ class CountdownSolver
             end
         end
         
-        three_sets = three_sets.uniq
+        return three_sets.uniq
         # Find a better way to do this
+    end
+
+    def add_three_sets
+        
+        three_sets = self.generate_three_sets
         
         three_sets.each do |set|
             a, b, c, set_possibilities = set[0], set[1], set[2], {}
@@ -298,7 +323,7 @@ class CountdownSolver
         self.pairs.each do |pair, possibilities|
             possibilities.each do |op_string, num|
                 if num
-                    pool = remove_pair_from_pool(pair)
+                    pool = pool_with_pair_removed(pair)
                     # pool = $numbers.clone() 
                     # pair.each {|num| pool.delete_at(pool.index(num))} 
     
@@ -331,6 +356,32 @@ class CountdownSolver
         puts ""
         puts "TIME:"
     
+    end
+
+    ############## Helper methods ################
+
+    def pool_with_pair_removed(pair)
+        if one_number_appears_twice_in_number_set?(pair)
+            remove_numbers_without_removing_duplicates(pair)
+        else
+            just_remove_the_numbers(pair)
+        end
+    end
+
+    def one_number_appears_twice_in_number_set?(pair)
+        return true if self.numbers.count(pair[0]) > 1
+        return true if self.numbers.count(pair[1]) > 1
+        return false
+    end
+
+    def remove_numbers_without_removing_duplicates(pair)
+        pool = self.numbers.clone() 
+        pair.each {|num| pool.delete_at(pool.index(num))}
+        return pool
+    end
+
+    def just_remove_the_numbers(pair)
+        return self.numbers - pair
     end
 
 end
