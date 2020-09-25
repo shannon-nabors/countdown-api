@@ -9,7 +9,8 @@ class CountdownSolver
     @@operators = ["+", "-", "/", "*"]
 
     # Each operation proc returns either the combination of two numbers using that operation,
-    # or FALSE if the result would be against the rules in Countdown (negative number, non-whole number)
+    # or, to cut down on solve time,
+    # FALSE if the result would be against the rules in Countdown (negative number, non-whole number)
     # or if it wouldn't be useful to do that operation (i.e. it gives us a number we already have)
     @@ops = {
         "+": Proc.new { |a, b| (a && b) ? a + b : false },
@@ -43,22 +44,24 @@ class CountdownSolver
         @@big.sample(big) + @@little.sample(little)
     end
 
+
     def get_goal
         (101...1000).to_a.sample
     end
+
 
     def run
         puts "\nGOAL: ", self.goal
         puts "\nNUMBERS: ", self.numbers
     
         self.separate_into_pairs
-        self.add_three_sets
+        self.add_three_sets_to_pairs
         self.solve
     end
 
-    ###############################
+    ############################### CREATING PAIRS
 
-    # Create a hash where each possible pair of numbers points to
+    # Creates a hash where each possible pair of numbers points to
     # all the numbers that could be made from combining them.
     #
     # Example:
@@ -69,19 +72,26 @@ class CountdownSolver
     def separate_into_pairs
         self.numbers.each_with_index do |num, index|
             pair_number_with_each_remaining(num, index)
+            # ex) If num is 75, it will be paired with 8, 4, and 1
         end
-        binding.pry
     end
+
 
     def pair_number_with_each_remaining(num, index)
-        next_index = index + 1
+        # num --> 100, index --> 0
+        next_index = index + 1 # 1
         return if next_index >= self.numbers.length
 
-        next_num = self.numbers[next_index]
-        self.pairs[[num, next_num]] = all_possible_numbers_from_combining(num, next_num)
+        next_num = self.numbers[next_index] # 75
 
-        pair_number_with_each_remaining(num, next_index)
+        if pairs_not_yet_generated(num, next_num)
+            self.pairs[[num, next_num]] = all_possible_numbers_from_combining(num, next_num)
+        end
+        # pairs --> {[100, 75] => {"100+75"=>175, "100-75"=>25, "100*75"=>7500, "100/75"=>false}}
+
+        pair_number_with_each_remaining(num, next_index) # next number will be 8, last will be 1
     end
+
 
     def all_possible_numbers_from_combining(a, b)
         results = {}
@@ -92,87 +102,68 @@ class CountdownSolver
         results["#{a}/#{b}"] = @@ops[:/].call(a, b)
 
         return results
+
+        # ex) a --> 100, b --> 8
+        # results --> {"100+8"=>108, "100-8"=>92, "100*8"=>800, "100/8"=>false}
     end
 
-    ###############################
+
+    def pairs_not_yet_generated(a, b)
+        !self.pairs[[a, b]]
+    end
+
+    ############################### CREATING THREE-SETS
     
     # Adds to the pairs hash all possible combinations of three numbers from the set.
     # Each set points to all the unique numbers that could be made from combining them.
     #
     # Example:
-    #
+    # self.pairs now includes...
+    # [100, 75, 8]=> {"100+75+8"=>183, "100+75-8"=>167, "100-75+8"=>33, "100-75-8"=>17,"75+8-100"=>false...}
+    # etc.
     #
     # This is necessary because some solutions involve combining two numbers
-    # that can only be gotten by combining three numbers.
+    # that themselves can only be gotten by combining three numbers.
+    #
+    # Example:
+    # (75*8)+1-(100+(8/4))
+    # (75*8)+1 = 601        100+(8/4) = 102         601-102 = 499
+    #
+    # This solution is valid, but can't be achieved by only combining pairs and single numbers.
 
 
     def generate_three_sets
         three_sets = []
         
-        self.pairs.each do |pair, possibilities|
-            pool = pool_with_pair_removed(pair)
+        self.pairs.each do |pair, possibilities| # pair --> [100, 75]
+            pool = pool_with_pair_removed(pair) # pool --> [8, 8, 4, 1]
     
             pool.each do |num|
-                if num <= pair[1]
+                if num <= pair[1] # is there a better way to handle this?
                     three_set = pair.clone() << num
                     three_sets << three_set
                 end
             end
         end
-        
+
         return three_sets.uniq
         # Find a better way to do this
     end
 
-    def add_three_sets
+    def add_three_sets_to_pairs
         
         three_sets = self.generate_three_sets
         
         three_sets.each do |set|
             a, b, c, set_possibilities = set[0], set[1], set[2], {}
             self.pairs[set] = set_possibilities
-            set_possibilities["#{a}+#{b}+#{c}"] = @@ops[:+].call(@@ops[:+].call(a, b), c)
-            set_possibilities["#{a}+#{b}-#{c}"] = @@ops[:-].call(@@ops[:+].call(a, b), c)
-            set_possibilities["#{a}-#{b}+#{c}"] = @@ops[:+].call(@@ops[:-].call(a, b), c)
-            set_possibilities["#{a}-#{b}-#{c}"] = @@ops[:-].call(@@ops[:-].call(a, b), c)
-            set_possibilities["#{b}+#{c}-#{a}"] = @@ops[:-].call(@@ops[:+].call(b, c), a)
-            set_possibilities["(#{a}+#{b})*#{c}"] = @@ops[:*].call(@@ops[:+].call(a, b), c)
-            set_possibilities["#{a}+(#{b}*#{c})"] = @@ops[:+].call(a, @@ops[:*].call(c, b))
-            set_possibilities["(#{a}+#{b})/#{c}"] = @@ops[:/].call(@@ops[:+].call(a, b), c)
-            set_possibilities["#{a}+(#{b}/#{c})"] = @@ops[:+].call(a, @@ops[:/].call(b, c))
-            set_possibilities["(#{a}-#{b})/#{c}"] = @@ops[:/].call(@@ops[:-].call(a, b), c)
-            set_possibilities["#{a}-(#{b}/#{c})"] = @@ops[:-].call(a, @@ops[:/].call(b, c))
-            set_possibilities["(#{a}-#{b})*#{c}"] = @@ops[:*].call(@@ops[:-].call(a, b), c)
-            set_possibilities["#{a}-(#{b}*#{c})"] = @@ops[:-].call(a, @@ops[:*].call(b, c))
-            set_possibilities["(#{a}*#{b})+#{c}"] = @@ops[:+].call(@@ops[:*].call(a, b), c)
-            set_possibilities["#{a}*(#{b}+#{c})"] = @@ops[:*].call(a, @@ops[:+].call(b, c))
-            set_possibilities["(#{a}*#{b})-#{c}"] = @@ops[:-].call(@@ops[:*].call(a, b), c)
-            set_possibilities["#{a}*(#{b}-#{c})"] = @@ops[:*].call(a, @@ops[:-].call(b, c))
-            set_possibilities["(#{a}/#{b})+#{c}"] = @@ops[:+].call(@@ops[:/].call(a, b), c)
-            set_possibilities["#{a}/(#{b}+#{c})"] = @@ops[:/].call(a, @@ops[:+].call(b, c))
-            set_possibilities["(#{a}/#{b})-#{c}"] = @@ops[:-].call(@@ops[:/].call(a, b), c)
-            set_possibilities["#{a}/(#{b}-#{c})"] = @@ops[:/].call(a, @@ops[:-].call(b, c))
-            set_possibilities["(#{a}+#{c})/#{b}"] = @@ops[:/].call(@@ops[:+].call(a, c), b)
-            set_possibilities["(#{a}-#{c})/#{b}"] = @@ops[:/].call(@@ops[:-].call(a, c), b)
-            set_possibilities["(#{a}+#{c})*#{b}"] = @@ops[:*].call(@@ops[:+].call(a, c), b)
-            set_possibilities["(#{a}-#{c})*#{b}"] = @@ops[:*].call(@@ops[:-].call(a, c), b)
-            set_possibilities["(#{a}*#{c})+#{b}"] = @@ops[:+].call(@@ops[:*].call(a, c), b)
-            set_possibilities["(#{a}/#{c})+#{b}"] = @@ops[:+].call(@@ops[:/].call(a, c), b)
-            set_possibilities["(#{a}*#{c})-#{b}"] = @@ops[:-].call(@@ops[:*].call(a, c), b)
-            set_possibilities["(#{a}/#{c})-#{b}"] = @@ops[:-].call(@@ops[:/].call(a, c), b)
-            set_possibilities["(#{b}+#{c})/#{a}"] = @@ops[:/].call(@@ops[:+].call(b, c), a)
-            set_possibilities["(#{b}*#{c})-#{a}"] = @@ops[:-].call(@@ops[:*].call(b, c), a)
-            set_possibilities["#{b}-(#{a}/#{c})"] = @@ops[:-].call(b, @@ops[:/].call(a, c))
-            set_possibilities["#{b}/(#{a}-#{c})"] = @@ops[:/].call(b, @@ops[:-].call(a, c))
-            set_possibilities["#{c}-(#{a}/#{b})"] = @@ops[:-].call(c, @@ops[:/].call(a, b))
-            set_possibilities["#{c}/(#{a}-#{b})"] = @@ops[:/].call(c, @@ops[:-].call(a, b))
-            set_possibilities["#{a}*#{b}*#{c}"] = @@ops[:*].call(@@ops[:*].call(a, b), c)
-            set_possibilities["#{a}/#{b}/#{c}"] = @@ops[:/].call(@@ops[:/].call(a, b), c)
-            set_possibilities["#{a}/#{b}*#{c}"] = @@ops[:*].call(@@ops[:/].call(a, b), c)
-            set_possibilities["#{a}*#{b}/#{c}"] = @@ops[:/].call(@@ops[:*].call(a, b), c)
-            set_possibilities["#{b}/#{c}*#{a}"] = @@ops[:*].call(@@ops[:/].call(b, c), a)
+            CountdownSolver.three_set_hash(a, b, c).each do |op_string, number|
+                set_possibilities[op_string] = number
+            end
         end
     end
+
+    ################################## SOLVING
 
     def possible_operands(set)
         operands = (set.length < 6 ? set.clone() : [])
@@ -280,8 +271,8 @@ class CountdownSolver
                     pool = pool - [combo]
                 end
     
-                addendum = "^^" + combo.to_s + "^^"
-                # addendum = combo.to_s
+                # addendum = "^^" + combo.to_s + "^^"
+                addendum = combo.to_s
     
                 try_all_ops(num, combo, solution, pool, addendum)
                 pool << combo
@@ -305,8 +296,8 @@ class CountdownSolver
     
                 self.pairs[combo].each do |op_string, number|
                     if number
-                        addendum = "|||" + op_string + "|||"
-                        # addendum = op_string
+                        # addendum = "|||" + op_string + "|||"
+                        addendum = op_string
                         try_all_ops(num, number, solution, pool, addendum)
                     end
                 end
@@ -327,8 +318,8 @@ class CountdownSolver
                     # pool = $numbers.clone() 
                     # pair.each {|num| pool.delete_at(pool.index(num))} 
     
-                    solution = "..." + op_string + "..."
-                    # solution = op_string
+                    # solution = "..." + op_string + "..."
+                    solution = op_string
                     if num == self.goal
                         self.solutions << solution
                         next
@@ -384,6 +375,32 @@ class CountdownSolver
         return self.numbers - pair
     end
 
+    ##################### Class methods ###################
+
+    def self.three_set_hash(a, b, c)
+        {"#{a}+#{b}+#{c}" => @@ops[:+].call(@@ops[:+].call(a, b), c), "#{a}+#{b}-#{c}" => @@ops[:-].call(@@ops[:+].call(a, b), c),
+         "#{a}-#{b}+#{c}" => @@ops[:+].call(@@ops[:-].call(a, b), c), "#{a}-#{b}-#{c}" => @@ops[:-].call(@@ops[:-].call(a, b), c),
+         "#{b}+#{c}-#{a}" => @@ops[:-].call(@@ops[:+].call(b, c), a), "(#{a}+#{b})*#{c}" => @@ops[:*].call(@@ops[:+].call(a, b), c),
+         "#{a}+(#{b}*#{c})" => @@ops[:+].call(a, @@ops[:*].call(c, b)), "(#{a}+#{b})/#{c}" => @@ops[:/].call(@@ops[:+].call(a, b), c),
+         "#{a}+(#{b}/#{c})" => @@ops[:+].call(a, @@ops[:/].call(b, c)), "(#{a}-#{b})/#{c}" => @@ops[:/].call(@@ops[:-].call(a, b), c),
+         "#{a}-(#{b}/#{c})" => @@ops[:-].call(a, @@ops[:/].call(b, c)), "(#{a}-#{b})*#{c}" => @@ops[:*].call(@@ops[:-].call(a, b), c),
+         "#{a}-(#{b}*#{c})" => @@ops[:-].call(a, @@ops[:*].call(b, c)), "(#{a}*#{b})+#{c}" => @@ops[:+].call(@@ops[:*].call(a, b), c),
+         "#{a}*(#{b}+#{c})" => @@ops[:*].call(a, @@ops[:+].call(b, c)), "(#{a}*#{b})-#{c}" => @@ops[:-].call(@@ops[:*].call(a, b), c),
+         "#{a}*(#{b}-#{c})" => @@ops[:*].call(a, @@ops[:-].call(b, c)), "(#{a}/#{b})+#{c}" => @@ops[:+].call(@@ops[:/].call(a, b), c),
+         "#{a}/(#{b}+#{c})" => @@ops[:/].call(a, @@ops[:+].call(b, c)), "(#{a}/#{b})-#{c}" => @@ops[:-].call(@@ops[:/].call(a, b), c),
+         "#{a}/(#{b}-#{c})" => @@ops[:/].call(a, @@ops[:-].call(b, c)), "(#{a}+#{c})/#{b}" => @@ops[:/].call(@@ops[:+].call(a, c), b),
+         "(#{a}-#{c})/#{b}" => @@ops[:/].call(@@ops[:-].call(a, c), b), "(#{a}+#{c})*#{b}" => @@ops[:*].call(@@ops[:+].call(a, c), b),
+         "(#{a}-#{c})*#{b}" => @@ops[:*].call(@@ops[:-].call(a, c), b), "(#{a}*#{c})+#{b}" => @@ops[:+].call(@@ops[:*].call(a, c), b),
+         "(#{a}/#{c})+#{b}" => @@ops[:+].call(@@ops[:/].call(a, c), b), "(#{a}*#{c})-#{b}" => @@ops[:-].call(@@ops[:*].call(a, c), b),
+         "(#{a}/#{c})-#{b}" => @@ops[:-].call(@@ops[:/].call(a, c), b), "(#{b}+#{c})/#{a}" => @@ops[:/].call(@@ops[:+].call(b, c), a),
+         "(#{b}*#{c})-#{a}" => @@ops[:-].call(@@ops[:*].call(b, c), a), "#{b}-(#{a}/#{c})" => @@ops[:-].call(b, @@ops[:/].call(a, c)),
+         "(#{b}*#{c})-#{a}" => @@ops[:-].call(@@ops[:*].call(b, c), a), "#{b}-(#{a}/#{c})" => @@ops[:-].call(b, @@ops[:/].call(a, c)),
+         "#{b}/(#{a}-#{c})" => @@ops[:/].call(b, @@ops[:-].call(a, c)), "#{c}-(#{a}/#{b})" => @@ops[:-].call(c, @@ops[:/].call(a, b)),
+         "#{c}/(#{a}-#{b})" => @@ops[:/].call(c, @@ops[:-].call(a, b)), "#{a}*#{b}*#{c}" => @@ops[:*].call(@@ops[:*].call(a, b), c),
+         "#{a}/#{b}/#{c}" => @@ops[:/].call(@@ops[:/].call(a, b), c), "#{a}/#{b}*#{c}" => @@ops[:*].call(@@ops[:/].call(a, b), c),
+         "#{a}*#{b}/#{c}" => @@ops[:/].call(@@ops[:*].call(a, b), c), "#{b}/#{c}*#{a}" => @@ops[:*].call(@@ops[:/].call(b, c), a)}
+    end
+
 end
 
 solver = CountdownSolver.new
@@ -392,8 +409,8 @@ puts Benchmark.realtime { solver.run }
 puts ""
 puts "ERRORS:"
 
-# $solutions.each do |solution|
-#     if eval(solution) != $goal
-#         puts solution + "  ------->  " + eval(solution).to_s
-#     end
-# end
+solver.solutions.each do |solution|
+    if eval(solution) != solver.goal
+        puts solution + "  ------->  " + eval(solution).to_s
+    end
+end
