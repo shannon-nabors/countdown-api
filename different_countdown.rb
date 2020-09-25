@@ -54,7 +54,7 @@ class CountdownSolver
         puts "\nGOAL: ", self.goal
         puts "\nNUMBERS: ", self.numbers
     
-        self.separate_into_pairs
+        self.separate_into_pairs(self.numbers)
         self.add_three_sets_to_pairs
         self.solve
     end
@@ -69,27 +69,32 @@ class CountdownSolver
     #                            [100, 8]=>{"100+8"=>108, "100-8"=>92, "100*8"=>800, "100/8"=>false},
     #                             etc. }
 
-    def separate_into_pairs
-        self.numbers.each_with_index do |num, index|
-            pair_number_with_each_remaining(num, index)
+    def separate_into_pairs(number_array, operand_array=nil)
+        number_array.each_with_index do |num, index|
+            pair_number_with_each_remaining(number_array, num, index, operand_array)
             # ex) If num is 75, it will be paired with 8, 4, and 1
         end
     end
 
 
-    def pair_number_with_each_remaining(num, index)
+    def pair_number_with_each_remaining(number_array, num, index, operand_array=nil)
         # num --> 100, index --> 0
         next_index = index + 1 # 1
-        return if next_index >= self.numbers.length
+        return if next_index >= number_array.length
 
-        next_num = self.numbers[next_index] # 75
+        next_num = number_array[next_index] # 75
 
-        if pairs_not_yet_generated(num, next_num)
-            self.pairs[[num, next_num]] = all_possible_numbers_from_combining(num, next_num)
+        if operand_array
+            operand_array << [num, next_num] if !operand_array.include?([num, next_num])
+        else
+            if pairs_not_yet_generated(num, next_num)
+                self.pairs[[num, next_num]] = all_possible_numbers_from_combining(num, next_num)
+            end
+            # pairs --> {[100, 75] => {"100+75"=>175, "100-75"=>25, "100*75"=>7500, "100/75"=>false}}
         end
-        # pairs --> {[100, 75] => {"100+75"=>175, "100-75"=>25, "100*75"=>7500, "100/75"=>false}}
+            
 
-        pair_number_with_each_remaining(num, next_index) # next number will be 8, last will be 1
+        pair_number_with_each_remaining(number_array, num, next_index, operand_array) # next number will be 8, last will be 1
     end
 
 
@@ -133,6 +138,8 @@ class CountdownSolver
 
 
     def generate_three_sets
+        # This generates an array of all the possible sets of three numbers for self.numbers
+        # e.g. [[100, 75, 8], [100, 75, 8], [100, 75, 4]...]
         three_sets = []
         
         self.pairs.each do |pair, possibilities| # pair --> [100, 75]
@@ -147,41 +154,43 @@ class CountdownSolver
         end
 
         return three_sets.uniq
-        # Find a better way to do this
+        # I would ideally like to find a better way to do this
     end
 
+
     def add_three_sets_to_pairs
+        # Adds every three_set as a key in self.pairs, pointing to all possible unique combos of those 3 numbers
+
+        three_sets = self.generate_three_sets # [[100, 75, 8], [100, 75, 8], [100, 75, 4]...]
         
-        three_sets = self.generate_three_sets
-        
-        three_sets.each do |set|
+        three_sets.each do |set| # set --> [100, 75, 8]
             a, b, c, set_possibilities = set[0], set[1], set[2], {}
             self.pairs[set] = set_possibilities
+            # self.pairs now includes [100, 75, 8] => {}
+
             CountdownSolver.three_set_hash(a, b, c).each do |op_string, number|
                 set_possibilities[op_string] = number
             end
+            # self.pairs now includes [100, 75, 8] => {"100+75+8"=>183, "100+75-8"=>167...}
         end
     end
 
     ################################## SOLVING
 
-    def possible_operands(set)
-        operands = (set.length < 6 ? set.clone() : [])
-        if set.length == 3
-            operands << set
-        end
-        set.each_with_index do |n, i|
-            index = i + 1
-            while index < set.length
-                a, b = n, set[index]
-                if !operands.include?([a, b])
-                    operands << [a, b]
-                end
-                index += 1
-            end
-        end
+    def possible_operands(number_set)
+        # returns all the numbers/sets of numbers that can be made from the remaining pool
+        # ex. number_set --> [8, 8, 4, 1], operands --> [8, 8, 4, 1, [8, 8], [8, 4], [8, 1], [4, 1]]
+
+        operands = number_set.clone() # all the individual numbers should be potential operands
+
+        operands << number_set if number_set.length == 3
+        # if there are only 3 numbers left in the pool, we need to try treating them as a set,
+        # in case there's a solution that requires a combination of those three numbers
+
+        separate_into_pairs(number_set, operands)
         return operands
     end
+
 
     def hanging_plus_or_minus(solution_string)
         # returns true if solution needs to be wrapped in ()
@@ -195,8 +204,7 @@ class CountdownSolver
         parenthetical = string.slice(open_index, close_index - open_index)
         string = string.sub(parenthetical, "")
         
-        return true if string.match?(/[+-]/)
-        return false
+        return string.match?(/[+-]/)
     end
 
     def try_all_ops(number_one, number_two, solution, pool, addendum)
@@ -329,23 +337,25 @@ class CountdownSolver
             end
         end
     
-        puts ""
-        puts "SOLUTIONS:"
+        puts "\nSOLUTIONS:"
     
         duplicate_checker = {}
+        duplicates = 0
     
         self.solutions.each_with_index do |solution, index|
             sol_string = index.to_s + "  ------>  " + solution
             if duplicate_checker[solution]
                 puts sol_string.red
+                duplicates += 1
             else
                 puts sol_string
             end
             duplicate_checker[solution] = "x"
         end
+
+        puts "\nDUPLICATES: #{duplicates}"
     
-        puts ""
-        puts "TIME:"
+        puts "\nTIME:"
     
     end
 
@@ -378,6 +388,10 @@ class CountdownSolver
     ##################### Class methods ###################
 
     def self.three_set_hash(a, b, c)
+        # These are the unique numbers you can get from combining 3 numbers
+        # i.e. If you know a/b/c = x, you don't need to try a/c/b -- it'll be x
+        # These are hard-coded since they won't change, to cut down on computation time
+        
         {"#{a}+#{b}+#{c}" => @@ops[:+].call(@@ops[:+].call(a, b), c), "#{a}+#{b}-#{c}" => @@ops[:-].call(@@ops[:+].call(a, b), c),
          "#{a}-#{b}+#{c}" => @@ops[:+].call(@@ops[:-].call(a, b), c), "#{a}-#{b}-#{c}" => @@ops[:-].call(@@ops[:-].call(a, b), c),
          "#{b}+#{c}-#{a}" => @@ops[:-].call(@@ops[:+].call(b, c), a), "(#{a}+#{b})*#{c}" => @@ops[:*].call(@@ops[:+].call(a, b), c),
