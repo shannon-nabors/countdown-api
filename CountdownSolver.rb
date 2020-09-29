@@ -29,19 +29,26 @@ class CountdownSolver
         # quotient can't be equal to one of the numbers (again, no point)
     }
 
-    attr_reader :goal, :numbers
-    attr_accessor :pairs, :solutions
+    attr_reader :goal, :big, :little
+    attr_accessor :numbers, :pairs, :solutions, :errors
 
-    def initialize() #(big, little)
-        @goal = 499#self.get_goal
-        @numbers = [100, 75, 8, 8, 4, 1]#self.get_numbers
+    def initialize(args)
+        @errors = []
+        @goal, @numbers, @big, @little = args.values_at(:goal, :numbers, :big, :little)
+        self.check_for_errors
+
+        @goal ||= self.get_goal
+        @numbers ||= self.get_numbers(@big, @little)
+
+        # @goal = goal #499
+        # @numbers = numbers #[100, 75, 8, 8, 4, 1] 
         @pairs, @solutions = {}, []
     end
 
     ###############################
 
     def get_numbers(big, little)
-        @@big.sample(big) + @@little.sample(little)
+        (@@big.sample(big) + @@little.sample(little)).sort.reverse
     end
 
 
@@ -50,13 +57,77 @@ class CountdownSolver
     end
 
 
-    def run
-        puts "\nGOAL: ", self.goal
-        puts "\nNUMBERS: ", self.numbers
+    def check_for_errors
+        if !self.arguments_match?
+            self.errors << "The parameters you've submitted are not allowed."
+            return
+        end
+
+        self.check_big_and_little
+        self.check_target
+        self.check_numbers
+    end
+
+
+    def arguments_match?
+        return false if (self.big && !self.little) || (self.little && !self.big)
+        return false if (self.goal && !self.numbers) || (self.numbers && !self.goal)
+        return true
+    end
+
+
+    def check_big_and_little
+        self.errors << "There are only four big numbers available." if self.big && self.big > 4
+        self.errors << "You must have six total numbers." if self.big && self.big + self.little != 6
+    end
+
+
+    def check_target
+        if self.goal
+            self.errors << "The target number must be between 101 and 999." if (self.goal < 101 || self.goal > 999)
+        end
+    end
     
+    def check_numbers
+        if self.numbers
+            self.numbers = self.numbers.sort.reverse
+
+            if self.numbers.length != 6
+                self.errors << "You must have six total numbers."
+                return
+            end
+
+            nums = Hash.new(0)
+            self.numbers.each do |number|
+                if number > 100 || number < 1 || (number > 10 && number%25 != 0)
+                    self.errors << "Your numbers must be either from 1-10 or 25, 50, 75 or 100."
+                    return
+                end
+
+                if number > 10 && nums[number] > 0
+                    self.errors << "25, 50, 75 and 100 can each only be used once."
+                    return
+                end
+
+                if nums[number] > 1
+                    self.errors << "Small numbers can only be used twice"
+                    return
+                end
+
+                nums[number] += 1
+            end
+        end
+    end
+
+
+    def run
+        # puts "\nGOAL: ", self.goal
+        # puts "\nNUMBERS: ", self.numbers
+        
         self.separate_into_pairs(self.numbers)
         self.add_three_sets_to_pairs
         self.solve
+        return self.solutions
     end
 
     ############################### CREATING PAIRS
@@ -337,25 +408,25 @@ class CountdownSolver
             end
         end
     
-        puts "\nSOLUTIONS:"
+        # puts "\nSOLUTIONS:"
     
-        duplicate_checker = {}
-        duplicates = 0
+        # duplicate_checker = {}
+        # duplicates = 0
     
-        self.solutions.each_with_index do |solution, index|
-            sol_string = index.to_s + "  ------>  " + solution
-            if duplicate_checker[solution]
-                puts sol_string.red
-                duplicates += 1
-            else
-                puts sol_string
-            end
-            duplicate_checker[solution] = "x"
-        end
+        # self.solutions.each_with_index do |solution, index|
+        #     sol_string = index.to_s + "  ------>  " + solution
+        #     if duplicate_checker[solution]
+        #         puts sol_string.red
+        #         duplicates += 1
+        #     else
+        #         puts sol_string
+        #     end
+        #     duplicate_checker[solution] = "x"
+        # end
 
-        puts "\nDUPLICATES: #{duplicates}"
+        # puts "\nDUPLICATES: #{duplicates}"
     
-        puts "\nTIME:"
+        # puts "\nTIME:"
     
     end
 
@@ -417,14 +488,14 @@ class CountdownSolver
 
 end
 
-solver = CountdownSolver.new
+# solver = CountdownSolver.new
 
-puts Benchmark.realtime { solver.run }
-puts ""
-puts "ERRORS:"
+# puts Benchmark.realtime { solver.run }
+# puts ""
+# puts "ERRORS:"
 
-solver.solutions.each do |solution|
-    if eval(solution) != solver.goal
-        puts solution + "  ------->  " + eval(solution).to_s
-    end
-end
+# solver.solutions.each do |solution|
+#     if eval(solution) != solver.goal
+#         puts solution + "  ------->  " + eval(solution).to_s
+#     end
+# end
