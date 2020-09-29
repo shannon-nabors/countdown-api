@@ -19,7 +19,7 @@ namespace '/api/v1' do
         solutions = solver.run
         solutions = "No exact solutions were found." if solutions.empty?
 
-        {"target": target, "numbers": numbers, "solutions": solutions}.to_json
+        return {"target": target, "numbers": numbers, "solutions": solutions}.to_json
     end
 
 end
