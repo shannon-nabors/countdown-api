@@ -12,10 +12,10 @@ namespace '/api/v1' do
     end
 
     get '/solve' do
-        solver = CountdownSolver.new(goal: params[:target], numbers: params[:numbers], big: params[:big], little: params[:little])
+        solver = CountdownSolver.new(target: params[:target], numbers: params[:numbers], big: params[:big], little: params[:little])
         return {"errors": solver.errors}.to_json if !solver.errors.empty?
 
-        target, numbers = solver.goal, solver.numbers
+        target, numbers = solver.target, solver.numbers
         solutions = solver.run
         solutions = "No exact solutions were found." if solutions.empty?
 

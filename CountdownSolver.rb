@@ -29,21 +29,21 @@ class CountdownSolver
         # quotient can't be equal to one of the numbers (again, no point)
     }
 
-    attr_reader :goal, :big, :little
+    attr_reader :target, :big, :little
     attr_accessor :numbers, :pairs, :solutions, :errors
 
     def initialize(args)
         @errors = []
-        @goal = (args[:goal] ? args[:goal].to_i : nil)
+        @target = (args[:target] ? args[:target].to_i : nil)
         @big = (args[:big] ? args[:big].to_i : nil)
         @little = (args[:little] ? args[:little].to_i : nil)
         @numbers = (args[:numbers]? parse_numbers(args[:numbers]) : nil)
         self.check_for_errors
-        
-        @goal ||= self.get_goal
+
+        @target ||= self.get_target
         @numbers ||= self.get_numbers(@big, @little)
 
-        # @goal = goal #499
+        # @target = target #499
         # @numbers = numbers #[100, 75, 8, 8, 4, 1] 
         @pairs, @solutions = {}, []
     end
@@ -55,7 +55,7 @@ class CountdownSolver
     end
 
 
-    def get_goal
+    def get_target
         (101...1000).to_a.sample
     end
 
@@ -78,7 +78,7 @@ class CountdownSolver
 
     def arguments_match?
         return false if (self.big && !self.little) || (self.little && !self.big)
-        return false if (self.goal && !self.numbers) || (self.numbers && !self.goal)
+        return false if (self.target && !self.numbers) || (self.numbers && !self.target)
         return true
     end
 
@@ -90,8 +90,8 @@ class CountdownSolver
 
 
     def check_target
-        if self.goal
-            self.errors << "The target number must be between 101 and 999." if (self.goal < 101 || self.goal > 999)
+        if self.target
+            self.errors << "The target number must be between 101 and 999." if (self.target < 101 || self.target > 999)
         end
     end
     
@@ -128,7 +128,7 @@ class CountdownSolver
 
 
     def run
-        # puts "\nGOAL: ", self.goal
+        # puts "\ntarget: ", self.target
         # puts "\nNUMBERS: ", self.numbers
         
         self.separate_into_pairs(self.numbers)
@@ -332,7 +332,7 @@ class CountdownSolver
                 end
             end
     
-            if new_number == self.goal
+            if new_number == self.target
                 self.solutions << solution
             end
     
@@ -406,7 +406,7 @@ class CountdownSolver
     
                     # solution = "..." + op_string + "..."
                     solution = op_string
-                    if num == self.goal
+                    if num == self.target
                         self.solutions << solution
                         next
                     end
@@ -502,7 +502,7 @@ end
 # puts "ERRORS:"
 
 # solver.solutions.each do |solution|
-#     if eval(solution) != solver.goal
+#     if eval(solution) != solver.target
 #         puts solution + "  ------->  " + eval(solution).to_s
 #     end
 # end
