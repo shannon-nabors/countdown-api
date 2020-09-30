@@ -34,9 +34,12 @@ class CountdownSolver
 
     def initialize(args)
         @errors = []
-        @goal, @numbers, @big, @little = args.values_at(:goal, :numbers, :big, :little)
+        @goal = (args[:goal] ? args[:goal].to_i : nil)
+        @big = (args[:big] ? args[:big].to_i : nil)
+        @little = (args[:little] ? args[:little].to_i : nil)
+        @numbers = (args[:numbers]? parse_numbers(args[:numbers]) : nil)
         self.check_for_errors
-
+        
         @goal ||= self.get_goal
         @numbers ||= self.get_numbers(@big, @little)
 
@@ -54,6 +57,10 @@ class CountdownSolver
 
     def get_goal
         (101...1000).to_a.sample
+    end
+
+    def parse_numbers(nums)
+        nums.split(",").map(&:to_i)
     end
 
 

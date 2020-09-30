@@ -11,7 +11,7 @@ namespace '/api/v1' do
         content_type 'application/json'
     end
 
-    post '/solve' do
+    get '/solve' do
         solver = CountdownSolver.new(goal: params[:target], numbers: params[:numbers], big: params[:big], little: params[:little])
         return {"errors": solver.errors}.to_json if !solver.errors.empty?
 

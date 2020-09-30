@@ -24,7 +24,7 @@ For example, if the target were 812 and the numbers were 75, 50, 2, 3, 8, and 7,
 The API would return this as ```"7*2*(50+8)"``` (as well as ```"(50+8)*2*7"``` and ```"(50+8)*7*2"```, etc.)
 
 ## Endpoints
-There is one endpoint, ```api/v1/solve```. Post requests to this endpoint can include two types of parameters:
+There is one endpoint, ```api/v1/solve```. Get requests to this endpoint can include two types of parameters:
 
 - As on the show, you can make a request for six unknown numbers by specifying how many "big" numbers and how many "little" numbers you want.  This option will also generate a target number.
 - If you know the target and the numbers (i.e. if you want to see how you can get 812 from 75, 50, 2, 3, 8 and 7), you can make a request for all the solutions.
@@ -44,10 +44,7 @@ ruby server.rb
 
 Sample request (with big/little specifications):
 ```sh
-fetch('http://localhost:4567/api/v1/solve', {
-    method: "POST",
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({big: 4, little: 2})})
+fetch('http://localhost:4567/api/v1/solve?big=4&little=2')
     .then(r => r.json()).then(console.log)
 ```
 Response:
@@ -57,10 +54,7 @@ Response:
 
 Sample request (with target and numbers):
 ```sh
-fetch('http://localhost:4567/api/v1/solve', {
-    method: "POST",
-    headers: {'Content-Type': 'application/json'},
-    body: JSON.stringify({target: 812, numbers: [7, 75, 50, 8, 3, 2]})})
+fetch('http://localhost:4567/api/v1/solve?target=812&numbers=75,50,8,7,3,2')
     .then(r => r.json()).then(console.log)
 ```
 Response:
