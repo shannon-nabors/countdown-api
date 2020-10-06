@@ -16,7 +16,9 @@ namespace '/api/v1' do
         return {"errors": solver.errors}.to_json if !solver.errors.empty?
 
         target, numbers = solver.target, solver.numbers
-        solutions = solver.run
+        solver.run
+        solutions = solver.solutions
+        byebug
         solutions = "No exact solutions were found." if solutions.empty?
 
         return {"target": target, "numbers": numbers, "solutions": solutions}.to_json

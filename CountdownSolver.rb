@@ -134,7 +134,6 @@ class CountdownSolver
         self.separate_into_pairs(self.numbers)
         self.add_three_sets_to_pairs
         self.solve
-        return self.solutions
     end
 
     ############################### CREATING PAIRS
@@ -272,16 +271,7 @@ class CountdownSolver
 
     def hanging_plus_or_minus(solution_string)
         # returns true if solution needs to be wrapped in ()
-        return false if !solution_string.match?(/[+-]/)
-        return true if !solution_string.match?(/[)]/)
-    
-        string = solution_string.clone()
-    
-        open_index = string.index("(")
-        close_index = string.chars.count - string.reverse.index(")")
-        parenthetical = string.slice(open_index, close_index - open_index)
-        string = string.sub(parenthetical, "")
-        
+        string = solution_string.clone().gsub(/\(([^)]+?)\)/, "") 
         return string.match?(/[+-]/)
     end
 
