@@ -16,7 +16,7 @@ describe "Countdown Solver" do
 
     describe 'General' do
         it "returns only correct solutions" do
-            solver = CountdownSolver.new(target: 250, numbers: '75,50,25,7,5,2')
+            solver = CountdownSolver.new(big: 3, little: 3)
             puts "TARGET: #{solver.target} *** NUMBERS: #{solver.numbers}"
             solver.run
             errors = 0
