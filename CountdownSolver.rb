@@ -348,9 +348,9 @@ class CountdownSolver
                 end
     
                 # addendum = "^^" + combo.to_s + "^^"
-                addendum = combo.to_s
+                # addendum = combo.to_s
     
-                try_all_ops(num, combo, solution, pool, addendum)
+                try_all_ops(num, combo, solution, pool, false)
                 pool << combo
                 pool = pool.sort.reverse
     
