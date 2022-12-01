@@ -3,9 +3,11 @@ GEM
   specs:
     byebug (11.1.3)
     coderay (1.1.3)
+    colorize (0.8.1)
+    diff-lcs (1.5.0)
     method_source (1.0.0)
     multi_json (1.15.0)
-    mustermann (1.1.1)
+    mustermann (2.0.2)
       ruby2_keywords (~> 0.0.1)
     pry (0.13.1)
       coderay (~> 1.1)
@@ -13,31 +15,46 @@ GEM
     pry-byebug (3.9.0)
       byebug (~> 11.0)
       pry (~> 0.13.0)
-    rack (2.2.3)
+    rack (2.2.4)
     rack-contrib (2.2.0)
       rack (~> 2.0)
-    rack-protection (2.1.0)
+    rack-protection (2.2.3)
       rack
-    ruby2_keywords (0.0.2)
-    sinatra (2.1.0)
-      mustermann (~> 1.0)
+    rspec (3.12.0)
+      rspec-core (~> 3.12.0)
+      rspec-expectations (~> 3.12.0)
+      rspec-mocks (~> 3.12.0)
+    rspec-core (3.12.0)
+      rspec-support (~> 3.12.0)
+    rspec-expectations (3.12.0)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.12.0)
+    rspec-mocks (3.12.0)
+      diff-lcs (>= 1.2.0, < 2.0)
+      rspec-support (~> 3.12.0)
+    rspec-support (3.12.0)
+    ruby2_keywords (0.0.5)
+    sinatra (2.2.3)
+      mustermann (~> 2.0)
       rack (~> 2.2)
-      rack-protection (= 2.1.0)
+      rack-protection (= 2.2.3)
       tilt (~> 2.0)
-    sinatra-contrib (2.1.0)
+    sinatra-contrib (2.2.3)
       multi_json
-      mustermann (~> 1.0)
-      rack-protection (= 2.1.0)
-      sinatra (= 2.1.0)
+      mustermann (~> 2.0)
+      rack-protection (= 2.2.3)
+      sinatra (= 2.2.3)
       tilt (~> 2.0)
-    tilt (2.0.10)
+    tilt (2.0.11)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
+  colorize
   pry-byebug
   rack-contrib
+  rspec
   sinatra
   sinatra-contrib
 
